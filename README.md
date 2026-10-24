@@ -13,6 +13,7 @@ Satu fail HTML, tiada *framework*, tiada *build step* masa penggunaan — double
 - **9 seksyen** — Rumah, Projek Peribadi, Next Ideas, Done (personal) + Pending Cytron,
   Tutorial Plan Q4, Slot Kosong, Weekly Focus, Done (Cytron)
 - **Butang filter** ikut status — Semua / Pending / In Progress / On Hold / Done
+- **Edit dalam halaman** — tukar status terus dari dashboard, tersimpan dalam localStorage
 - **Progress bar + peratusan** untuk setiap seksyen
 - **Responsive** — jadi kecil bila skrin kecil
 - **Tiada dependency luar** — berfungsi walaupun offline
@@ -31,6 +32,22 @@ Pending 35 · In Progress 2 · Done 18 · On Hold 0 · Upcoming 1 · Jumlah 56
 2. Klik butang filter atas untuk tapis ikut status.
 
 Tidak perlu server, tidak perlu internet.
+
+### Tukar status terus dalam dashboard
+
+1. Klik **✏️ Edit Status** (paparan terus jadi boleh edit).
+2. Klik mana-mana sel status — satu bar butang muncul.
+3. Pilih status baharu. Kad statistik & progress bar dikemas kini serta-merta.
+4. Ulangi untuk sel lain, kemudian klik **✏️ Edit: ON** untuk tamat.
+
+Perubahan disimpan dalam `localStorage` browser, jadi iakal bila halaman
+dibuka semula — tetapi ia **belum** masuk ke fail sumber.
+
+### Simpan perubahan kembali ke fail sumber
+
+1. Klik **💾 Simpan ke Markdown** — kandungan `.md` yang dikemas kini dipaparkan.
+2. Salin kandungan itu ke `tasks/personal-tasks.md` atau `tasks/cytron-tasks.md`.
+3. Commit & push. GitHub Pages akan hantar dashboard dengan status baharu.
 
 ---
 
@@ -70,7 +87,8 @@ DailyTask/
 │   ├── personal-tasks.md # task peribadi
 │   └── cytron-tasks.md   # task Cytron
 ├── scripts/
-│   └── verify_dashboard.mjs  # ujian render tanpa browser (Node)
+│   ├── verify_dashboard.mjs  # ujian render tanpa browser (Node)
+│   └── verify_edit.mjs      # ujian aliran edit status (Node)
 └── README.md
 ```
 
@@ -92,11 +110,13 @@ Fail lama `index.html` akan ditulis ganti dengan data terkini. Stamp
 ### Semakan render (pilihan, perlukan Node)
 
 ```bash
-node scripts/verify_dashboard.mjs
+node scripts/verify_dashboard.mjs   # render + kiraan status
+node scripts/verify_edit.mjs        # aliran edit status + output markdown
 ```
 
 Mengesan: kad statistik, seksyen, bilangan baris, *pill* status, dan sebarang
-`${...}` / `undefined` / `NaN` yang tak terselesaikan.
+`${...}` / `undefined` / `NaN` yang tak terselesaikan. `verify_edit.mjs` juga
+menyemak kiraan status dalam halaman padan dengan output `build_dashboard.py`.
 
 ### Deploy ke GitHub Pages
 

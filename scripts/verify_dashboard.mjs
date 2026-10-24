@@ -21,7 +21,19 @@ const mkEl = (id) => ({
 
 globalThis.document = {
   getElementById: (id) => (els[id] ??= mkEl(id)),
+  querySelector: () => null,
   querySelectorAll: () => [],
+  addEventListener() {},
+  body: mkEl('body'),
+};
+
+// The dashboard persists in-page status changes here; stub it so this
+// headless run stays deterministic.
+const __store = {};
+globalThis.localStorage = {
+  getItem: (k) => (k in __store ? __store[k] : null),
+  setItem: (k, v) => { __store[k] = String(v); },
+  removeItem: (k) => { delete __store[k]; },
 };
 
 eval(script);
