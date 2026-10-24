@@ -112,14 +112,8 @@ akan dihoskan terus di <https://khairultajudin.github.io/DailyTask/> — tiada w
 
 ## Nota privasi
 
-Repo ini **public**. Ia mengandungi:
-
-- nama & maklumat pelanggan (contoh: BizTrack / Puan Hana, Makmal E23)
-- butiran perniagaan (invoice, cawangan, quotation)
-- perkara peribadi (rumah, KWSP, PTPTN)
-
-Kalau awak tak selesa, tukar repo kepada **Private** (Settings → General → Danger Zone)
-atau buang maklumat sensitif dari `tasks/` dan regenerate.
+Repo ini **public**, jadi nama pelanggan, institusi, dan butiran peribadi telah
+diredaksi kepada label generik (contoh: "Pelanggan A").
 
 ---
 
