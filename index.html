@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAI — Task Dashboard</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#141a24; --panel2:#1b2331; --line:#263145;
+    --txt:#e6edf7; --dim:#8b9bb4; --accent:#4ade80; --accent2:#38bdf8;
+    --pend:#f59e0b; --prog:#38bdf8; --done:#4ade80; --hold:#f472b6;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:1180px; margin:0 auto}
+  header{display:flex; flex-wrap:wrap; align-items:baseline; gap:12px; margin-bottom:22px}
+  h1{font-size:26px; margin:0; letter-spacing:-.4px}
+  h1 span{color:var(--accent)}
+  .stamp{color:var(--dim); font-size:12.5px}
+  .controls{display:flex; gap:8px; margin:18px 0 26px; flex-wrap:wrap}
+  .btn{
+    background:var(--panel); border:1px solid var(--line); color:var(--dim);
+    padding:7px 13px; border-radius:999px; cursor:pointer; font-size:13px;
+  }
+  .btn:hover{color:var(--txt); border-color:var(--accent2)}
+  .btn.on{background:var(--accent2); border-color:var(--accent2); color:#04121c; font-weight:600}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:26px}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px}
+  .stat .n{font-size:28px; font-weight:700; letter-spacing:-1px}
+  .stat .l{color:var(--dim); font-size:12.5px; margin-top:2px}
+  .stat.pending .n{color:var(--pend)} .stat.progress .n{color:var(--prog)}
+  .stat.done .n{color:var(--done)} .stat.hold .n{color:var(--hold)}
+  .stat.upcoming .n{color:#c4b5fd}
+  h2{font-size:13px; text-transform:uppercase; letter-spacing:1.2px; color:var(--dim);
+     margin:26px 0 10px; display:flex; align-items:center; gap:9px}
+  h2 .tag{background:var(--panel2); border:1px solid var(--line); border-radius:6px;
+           padding:2px 8px; font-size:11.5px; letter-spacing:0; text-transform:none; color:var(--accent2)}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+        overflow:hidden; margin-bottom:14px}
+  .card .head{padding:13px 16px; background:var(--panel2); border-bottom:1px solid var(--line);
+              display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap}
+  .card .head .t{font-weight:600; font-size:14.5px}
+  .card .head .c{color:var(--dim); font-size:12.5px}
+  .bar{height:3px; background:var(--line)}
+  .bar i{display:block; height:100%; background:var(--accent2); width:0; transition:width .5s}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:10px 16px; text-align:left; font-size:13.5px; vertical-align:top}
+  th{color:var(--dim); font-size:11.5px; text-transform:uppercase; letter-spacing:.8px; font-weight:600}
+  tbody tr{border-top:1px solid var(--line)}
+  tbody tr:hover{background:#18202e}
+  td.num{color:var(--dim); width:44px; font-variant-numeric:tabular-nums}
+  td.notes{color:var(--dim)}
+  .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:600; white-space:nowrap}
+  .pill.pending{background:#3a2c10; color:var(--pend)}
+  .pill.progress{background:#0f2a3d; color:var(--prog)}
+  .pill.done{background:#12351f; color:var(--done)}
+  .pill.hold{background:#371626; color:var(--hold)}
+  .pill.upcoming{background:#2b1e44; color:#c4b5fd}
+  .pill.none{background:var(--panel2); color:var(--dim); font-weight:500}
+  .ev{color:var(--dim); font-size:12.5px}
+  footer{color:var(--dim); font-size:12.5px; margin-top:30px; text-align:center}
+  .hidden{display:none}
+  @media (max-width:640px){
+    body{padding:18px 12px 40px}
+    th,td{padding:9px 10px; font-size:12.5px}
+    .card .head .t{font-size:13.5px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>KAI <span>//</span> Task Dashboard</h1>
+    <span class="stamp" id="stamp"></span>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="controls" id="controls">
+    <button class="btn on" data-f="all">Semua</button>
+    <button class="btn" data-f="pending">⏳ Pending</button>
+    <button class="btn" data-f="progress">🔄 In Progress</button>
+    <button class="btn" data-f="hold">⏸️ On Hold</button>
+    <button class="btn" data-f="done">✅ Done</button>
+  </div>
+
+  <main id="sections"></main>
+
+  <footer>
+    Sumber: <code>personal-tasks.md</code> &amp; <code>cytron-tasks.md</code> ·
+    Tukar task dalam fail .md, jalan semula <code>build_dashboard.py</code> untuk refresh.
+  </footer>
+</div>
+
+<script>
+const DATA = {"generated": "2026-10-25 00:42", "counters": {"pending": 35, "progress": 2, "done": 18, "hold": 0, "upcoming": 1, "total": 56}, "sections": [{"bucket": "Personal", "title": "🏠 Rumah (House)", "header": ["#", "Task", "Status", "Nota"], "rows": [{"cells": ["1", "Kepala charger", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["2", "Peti ais (kipas)", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["3", "Seal atap bilik", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["4", "Wire management", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["5", "Kira duit syiling", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["6", "Water heater", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["7", "Pasang Coway (penapis air)", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["8", "Lap kipas atas", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["9", "Cable cord", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["10", "Bookshelf Quran", "⏳", ""], "status": "pending", "status_label": "Pending"}]}, {"bucket": "Personal", "title": "💼 Projek Peribadi (Personal Projects)", "header": ["#", "Task", "Status", "Nota"], "rows": [{"cells": ["1", "BizTrack (Puan Hana)", "🔄 Ongoing", "Oct subscription dah bayar. Upgrade 3 ciri: (1) upload PDF invois, (2) cawangan Pauh Jaya + Kelisa Emas, (3) kawalan akses gaji guru. Spec: BizTrack/docs/upgrade-puan-hana-2026-10.md"], "status": "progress", "status_label": "In Progress"}, {"cells": ["2", "AmOLED ESP32", "⏳", "Clamp design"], "status": "pending", "status_label": "Pending"}, {"cells": ["3", "Airfryer dashboard", "⏳", "Siap. Display ke website. C:\\Users\\user\\.gemini\\antigravity-ide\\scratch\\air-fryer-dashboard"], "status": "pending", "status_label": "Pending"}, {"cells": ["4", "TikTok video", "⏳", "4 video dah edit. Tambah voice audio."], "status": "pending", "status_label": "Pending"}, {"cells": ["5", "Check KWSP", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["6", "Bayar PTPTN guna KWSP", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["7", "Buat Maybank account", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["8", "Hydroponic Kratky", "✅", "Siap. Platform temporary + design baru menyusul sebagai project baharu."], "status": "done", "status_label": "Done"}]}, {"bucket": "Personal", "title": "💡 Next Ideas (Personal)", "header": ["#", "Idea", "Status", "Nota"], "rows": [{"cells": ["1", "Invoice system", "⏳", "Development. Generate invoice terus."], "status": "pending", "status_label": "Pending"}, {"cells": ["2", "System keluar masuk duit", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["3", "Summary duit MK Venture", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["4", "Summary duit personal", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["5", "Video cara buat logo sekolah", "⏳", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["6", "Follow up payment invoice 52", "✅", "Customer dah bayar. Bengkel 18 Oct di SK Padang Lumat"], "status": "done", "status_label": "Done"}, {"cells": ["7", "Hydroponic Kratky — design baharu", "🔜", "Projek baharu. Ganti design temporary, custom 3D print."], "status": "upcoming", "status_label": "Upcoming"}]}, {"bucket": "Personal", "title": "✅ Done", "header": ["#", "Task", "Tarikh", "Nota"], "rows": [{"cells": ["1", "Promotion Nomination Form", "9 Oct", "Dah submit. Proposed: Senior Marketing Engineer, L3"], "status": "done", "status_label": "Done"}, {"cells": ["2", "Hydroponic guide deploy", "13 Oct", "Berjaya masuk ke khaispace.com"], "status": "done", "status_label": "Done"}, {"cells": ["3", "khaispace.com", "13 Oct", "Berjaya deploy"], "status": "done", "status_label": "Done"}, {"cells": ["4", "Follow up Makmal E23", "13 Oct", "Dah hantar invoice & barang. Tunggu payment"], "status": "done", "status_label": "Done"}, {"cells": ["5", "Beli spare part Bambu Lab A1", "13 Oct", "Dah beli, tengah tunggu sampai"], "status": "done", "status_label": "Done"}]}, {"bucket": "Cytron", "title": "⏳ Pending", "header": ["#", "Task", "Priority", "Nota"], "rows": [{"cells": ["1", "Settle uncategorised tutorials", "P1", "🔄 In Progress — dah start, belum habis"], "status": "progress", "status_label": "In Progress"}, {"cells": ["2", "Revamp old tutorials", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["3", "Update Tutorial Guide (Intern & Staff)", "P2", "Update existing guide"], "status": "pending", "status_label": "Pending"}, {"cells": ["4", "AI Coding Pack — utilize utk Maker ESP32", "P1", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["5", "New look Cytron homepage", "P2", "Minor edit. Draft pakai claude dah siap."], "status": "pending", "status_label": "Pending"}, {"cells": ["6", "Tutorial categories", "P1", "Belum selesai — tengah cari masa"], "status": "pending", "status_label": "Pending"}, {"cells": ["7", "Centralize tutorials ke 1 GitHub/hub", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["8", "Tutorial rule guide", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["9", "Follow up video Maker ESP32 Jazari & FTKE UTEM", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["10", "Publish comic strip", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["11", "Comic strip baru — Maker Sumo RP", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["12", "ESP32 workshop Poli Balik Pulau — quotation", "P1", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["13", "Follow up Sarah (3D Printing Talk)", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["14", "Check tutorial from Sufi", "P2", ""], "status": "pending", "status_label": "Pending"}, {"cells": ["15", "Kolaborasi Cytron × Domechy — En Ridzuan", "P1", "14 Oct"], "status": "pending", "status_label": "Pending"}]}, {"bucket": "Cytron", "title": "📅 Cytron Insights Tutorial Plan (Q4: 12 Oct – 31 Dis 2026)", "header": ["Minggu", "Tarikh", "Topik", "Jenis", "Evidence"], "rows": [{"cells": ["1", "12–16 Oct", "I2C Device Not Detected? 7-Step Fix for Arduino, ESP32 & Raspberry Pi", "New", "I2C 21x, HuskyLens I2C 8x"], "status": "", "status_label": ""}, {"cells": ["2", "19–23 Oct", "Maker ESP32: 5V Sensors, Relays, Brownout & Wi-Fi", "New", "ESP32 195x, brownout recurring"], "status": "", "status_label": ""}, {"cells": ["3", "26–30 Oct", "Maker Mini Sumo: Fix Motors, Sensors & Boards", "New", "Sumo 232x. **Publish by 28 Oct**"], "status": "", "status_label": ""}, {"cells": ["4", "2–6 Nov", "Raspberry Pi Camera (CSI) for Beginners", "Revamp", "DSI/CSI 43x, fragile connectors"], "status": "", "status_label": ""}, {"cells": ["5", "9–13 Nov", "**KOSONG**", "—", "Isi kemudian dengan insight baharu"], "status": "", "status_label": ""}, {"cells": ["6", "16–20 Nov", "Motor Driver Power: SMPS, Shunt Regulator & Stall Current", "New", "MotorDrv 147x, burnout 144x, MDDRC5 111x"], "status": "", "status_label": ""}, {"cells": ["7", "23–27 Nov", "Battery and LiPo Care", "Revamp", "Battery 145x"], "status": "", "status_label": ""}, {"cells": ["8", "30 Nov–4 Dec", "Raspberry Pi 5 Won't Boot, Keeps Rebooting or Shows No Display", "New", "RPi5 349x, boot failure 53x"], "status": "", "status_label": ""}, {"cells": ["9", "7–11 Dec", "DSI & HDMI Touch Displays on RPi 5 + Argon HMI Cabling", "Revamp", "Display 242x, Argon 33x"], "status": "", "status_label": ""}, {"cells": ["10", "14–18 Dec", "**KOSONG**", "—", "Isi kemudian dengan insight baharu"], "status": "", "status_label": ""}, {"cells": ["11", "21–24 Dec", "HuskyLens 2 Set-Up, Power and I2C", "New", "HuskyLens 47x, overheating + firmware corruption"], "status": "", "status_label": ""}, {"cells": ["12", "28–31 Dec", "Open (buffer)", "—", "Flex slot"], "status": "", "status_label": ""}]}, {"bucket": "Cytron", "title": "Slot Kosong — kandidat untuk diisi kemudian", "header": ["Kandidat", "Evidence", "Kenapa sesuai"], "rows": [{"cells": ["Jetson Orin/Nano boot, PSU & OS", "190x", "Produk high-value, isu berulang"], "status": "", "status_label": ""}, {"cells": ["Micro:bit + REKA:BIT (MakeCode)", "106x", "Pasar pendidikan, extension conflict"], "status": "", "status_label": ""}, {"cells": ["School LO / quotation process", "66x", "Keperluan paling kerap, tiada panduan"], "status": "", "status_label": ""}, {"cells": ["Grove ecosystem", "8x", "Keyword baharu (Mac) — lemah, tunggu data lagi"], "status": "", "status_label": ""}]}, {"bucket": "Cytron", "title": "Weekly Focus (12–16 Oct)", "header": ["#", "Task", "Nota"], "rows": [{"cells": ["1", "One Industrial Article", ""], "status": "", "status_label": ""}, {"cells": ["2", "One Revamp Tutorial", ""], "status": "", "status_label": ""}, {"cells": ["3", "Cytron Insights Tutorial #1 — I2C device not detected", "**Start drafting**"], "status": "", "status_label": ""}, {"cells": ["4", "Monthly Tutorial Checking (Sept)", ""], "status": "", "status_label": ""}, {"cells": ["5", "AI-powered tutorial restructuring", "Audit 100 tutorial per week"], "status": "", "status_label": ""}, {"cells": ["6", "Minor update Cytron Website Homepage", ""], "status": "", "status_label": ""}, {"cells": ["7", "Kolaborasi Cytron × Domechy — En Ridzuan", "14 Oct"], "status": "", "status_label": ""}]}, {"bucket": "Cytron", "title": "✅ Done", "header": ["#", "Task", "Tarikh", "Nota"], "rows": [{"cells": ["1", "Jumpa bos — bincang Q4", "8 Oct (Khamis)", "Bos setuju dengan Q4 plan"], "status": "done", "status_label": "Done"}, {"cells": ["2", "FYP Judge at PSP", "5 Oct", "Form printed & filled"], "status": "done", "status_label": "Done"}, {"cells": ["3", "FYP Judge claim (HR)", "5 Oct", "3 sessions: Arus Academy, Politeknik Balik Pulau, PSP"], "status": "done", "status_label": "Done"}, {"cells": ["4", "Cytron Tutorial Page <> IT", "5 Oct", "Mockup dah hantar ke IT team"], "status": "done", "status_label": "Done"}, {"cells": ["5", "Reply email Mr Ridzwan (Cytron × Domechy)", "5 Oct", "Kolaborasi follow-up"], "status": "done", "status_label": "Done"}, {"cells": ["6", "Appraisal form Q3", "6 Oct", "Siap"], "status": "done", "status_label": "Done"}, {"cells": ["7", "Appraisal meeting dengan bos", "6 Oct (Selasa)", "Q3 appraisal (Jul–Sept) — settled"], "status": "done", "status_label": "Done"}, {"cells": ["8", "Maker ESP32 campaign (Q3)", "Jul–Sept", "NPI, teaser, reviewer, launching"], "status": "done", "status_label": "Done"}, {"cells": ["9", "Industrial articles (18)", "Jul–Sept", "IRIV, Workshop, AI"], "status": "done", "status_label": "Done"}, {"cells": ["10", "Promotion Nomination Form", "9 Oct", "Dah submit. Proposed: Senior Marketing Engineer, L3"], "status": "done", "status_label": "Done"}, {"cells": ["11", "Cytron Insights Tutorial — topic finalized", "13 Oct", "12 topik dipilih dari data Jan–Oct"], "status": "done", "status_label": "Done"}]}]};
+
+document.getElementById('stamp').textContent = 'Dikemaskini: ' + DATA.generated;
+
+const c = DATA.counters;
+const cards = [
+  {k:'pending', n:c.pending, l:'Pending', cls:'pending'},
+  {k:'progress', n:c.progress, l:'In Progress', cls:'progress'},
+  {k:'done', n:c.done, l:'Done', cls:'done'},
+  {k:'hold', n:c.hold, l:'On Hold', cls:'hold'},
+  {k:'upcoming', n:c.upcoming||0, l:'Upcoming', cls:'upcoming'},
+  {k:'total', n:c.total, l:'Jumlah', cls:''},
+];
+document.getElementById('stats').innerHTML = cards.map(x =>
+  `<div class="stat ${x.cls}"><div class="n">${x.n}</div><div class="l">${x.l}</div></div>`
+).join('');
+
+function pill(row){
+  if(!row.status) return '<span class="pill none">—</span>';
+  const icon = {pending:'⏳',progress:'🔄',done:'✅',hold:'⏸️',upcoming:'🔜'}[row.status];
+  return `<span class="pill ${row.status}">${icon} ${row.status_label}</span>`;
+}
+
+function render(filter){
+  const host = document.getElementById('sections');
+  let lastBucket = null;
+  let html = '';
+  DATA.sections.forEach(sec=>{
+    const rows = sec.rows.filter(r => filter==='all' || r.status===filter);
+    if(!rows.length) return;
+    if(sec.bucket !== lastBucket){
+      html += `<h2>${sec.bucket === 'Cytron' ? '🛠' : '🏠'} ${sec.bucket}<span class="tag">${sec.bucket === 'Cytron' ? 'Cytron Technologies' : 'Peribadi'}</span></h2>`;
+      lastBucket = sec.bucket;
+    }
+    const done = rows.filter(r=>r.status==='done').length;
+    const pct = Math.round(done/rows.length*100);
+    const hasNotes = sec.header.some(h=>/nota|evidence/i.test(h));
+    const stIdx = sec.header.findIndex(h=>/status/i.test(h));
+    const header = stIdx >= 0 ? sec.header : [...sec.header, 'Status'];
+    const cellFor = (row, i) => {
+      if(i === stIdx && row.status) return pill(row);
+      if(stIdx < 0 && i === header.length-1) return row.status ? pill(row) : '<span class="pill none">—</span>';
+      return row.cells[i] ?? '';
+    };
+    html += `
+      <div class="card">
+        <div class="head">
+          <span class="t">${sec.title}</span>
+          <span class="c">${rows.length} item · ${done} done (${pct}%)</span>
+        </div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <table>
+          <thead><tr>${header.map((h,i)=>`<th class="${i===0?'num':''}">${h}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${rows.map(r=>`<tr>${
+              header.map((h,i)=>{
+                const cls = (i===0 && /^\d+$/.test(r.cells[i]||'')) ? 'num'
+                          : (hasNotes && i===sec.header.length-1 && stIdx<0 ? 'notes' : '');
+                return `<td class="${cls}">${cellFor(r,i)}</td>`;
+              }).join('')
+            }</tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  });
+  host.innerHTML = html || '<p class="stamp">Tiada item dalam filter ini.</p>';
+}
+
+document.getElementById('controls').addEventListener('click', e=>{
+  const b = e.target.closest('.btn'); if(!b) return;
+  document.querySelectorAll('#controls .btn').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  render(b.dataset.f);
+});
+
+render('all');
+</script>
+</body>
+</html>
