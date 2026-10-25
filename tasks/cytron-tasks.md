@@ -8,23 +8,23 @@
 
 ## ⏳ Pending
 
-| # | Task | Priority | Nota |
-|---|------|----------|------|
-| 1 | Settle uncategorised tutorials | P1 | 🔄 In Progress — dah start, belum habis |
-| 2 | Revamp old tutorials | P2 | |
-| 3 | Update Tutorial Guide (Intern & Staff) | P2 | ✅ |
-| 4 | AI Coding Pack — utilize utk Maker ESP32 | P1 | |
-| 5 | New look Cytron homepage | P2 | Minor edit. Draft pakai claude dah siap. |
-| 6 | Tutorial categories | P1 | Belum selesai — tengah cari masa |
-| 7 | Centralize tutorials ke 1 GitHub/hub | P2 | |
-| 8 | Tutorial rule guide | P2 | |
-| 9 | Follow up video Maker ESP32 Jazari & FTKE UTEM | P2 | |
-| 10 | Publish comic strip | P2 | |
-| 11 | Comic strip baru — Maker Sumo RP | P2 | |
-| 12 | ESP32 workshop Poli Balik Pulau — quotation | P1 | |
-| 13 | Follow up Sarah (3D Printing Talk) | P2 | |
-| 14 | Check tutorial from Sufi | P2 | |
-| 15 | Kolaborasi Cytron × Domechy — En Ridzuan | P1 | 14 Oct |
+| # | Task | Priority | Nota | Status |
+|---|------|----------|------|--------|
+| 1 | Settle uncategorised tutorials | P1 | 🔄 In Progress — dah start, belum habis | |
+| 2 | Revamp old tutorials | P2 | | |
+| 3 | Update Tutorial Guide (Intern & Staff) | P2 | Update existing guide | ✅ |
+| 4 | AI Coding Pack — utilize utk Maker ESP32 | P1 | | |
+| 5 | New look Cytron homepage | P2 | Minor edit. Draft pakai claude dah siap. | |
+| 6 | Tutorial categories | P1 | Belum selesai — tengah cari masa | |
+| 7 | Centralize tutorials ke 1 GitHub/hub | P2 | | |
+| 8 | Tutorial rule guide | P2 | | |
+| 9 | Follow up video Maker ESP32 Jazari & FTKE UTEM | P2 | | |
+| 10 | Publish comic strip | P2 | | |
+| 11 | Comic strip baru — Maker Sumo RP | P2 | | |
+| 12 | ESP32 workshop Poli Balik Pulau — quotation | P1 | | |
+| 13 | Follow up Sarah (3D Printing Talk) | P2 | | |
+| 14 | Check tutorial from Sufi | P2 | | |
+| 15 | Kolaborasi Cytron × Domechy — En Ridzuan | P1 | 14 Oct | |
 
 ---
 

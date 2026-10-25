@@ -537,26 +537,42 @@ function renderMarkdown() {
     let section = null;
     let rowIdx = -1;
     let changed = 0;
+    let fixSepNext = false;   // header gained a Status column -> extend its separator too
     for (let li = 0; li < lines.length; li++) {
       const line = lines[li];
       const hm = line.match(/^#{2,3}\s+(.*)$/);
-      if (hm) { section = hm[1].trim(); rowIdx = -1; continue; }
+      if (hm) { section = hm[1].trim(); rowIdx = -1; fixSepNext = false; continue; }
       const trimmed = line.trim();
       if (!trimmed.startsWith('|')) continue;
-      if (/^\|[\s:\-|]+\|$/.test(trimmed)) continue;
+      if (/^\|[\s:\-|]+\|$/.test(trimmed)) {
+        if (fixSepNext) { lines[li] = trimmed.replace(/\|$/, '') + '|------|'; fixSepNext = false; }
+        continue;
+      }
       const cells = trimmed.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
       if (!cells.length) continue;
-      if (/^(#|task|idea|minggu|kandidat)$/i.test(cells[0])) continue;
+      if (/^(#|task|idea|minggu|kandidat)$/i.test(cells[0])) {
+        // Section has no Status column yet: add one rather than overwriting the
+        // last column (which may hold a real note, e.g. Cytron's "Nota").
+        if (!/status/i.test(cells.join('|'))) {
+          lines[li] = trimmed.replace(/\s*\|$/, '') + ' | Status |';
+          fixSepNext = true;
+        }
+        continue;
+      }
       rowIdx++;
       const st = resolveStatus(bucket, section, rowIdx);
       const before = origStatus(bucket, section, rowIdx);
       if (st === before) continue;
       const sec = SECTION_INDEX[bucket + '||' + section];
       const stIdx = sec ? statusCol(sec) : -1;
-      const target = stIdx >= 0 ? stIdx : cells.length - 1;
       const newCells = cells.slice();
-      while (newCells.length <= target) newCells.push('');
-      newCells[target] = st ? STATUS_MD[st] : STATUS_MD.none;
+      if (stIdx >= 0) {
+        while (newCells.length <= stIdx) newCells.push('');
+        newCells[stIdx] = st ? STATUS_MD[st] : STATUS_MD.none;
+      } else {
+        // No Status column: append one so existing columns are left intact.
+        newCells.push(st ? STATUS_MD[st] : STATUS_MD.none);
+      }
       lines[li] = '| ' + newCells.join(' | ') + ' |';
       changed++;
     }
