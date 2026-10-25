@@ -51,6 +51,14 @@
 
 ---
 
+## Status Legend
+- ⏳ Pending
+- 🔄 In Progress
+- ✅ Done
+- ⏸️ On Hold
+
+---
+
 ## ✅ Done
 
 | # | Task | Tarikh | Nota |
@@ -60,11 +68,3 @@
 | 3 | khaispace.com | 13 Oct | Berjaya deploy |
 | 4 | Follow up Pelanggan B | 13 Oct | Dah hantar invoice & barang. Tunggu payment |
 | 5 | Beli spare part Bambu Lab A1 | 13 Oct | Dah beli, tengah tunggu sampai |
-
----
-
-## Status Legend
-- ⏳ Pending
-- 🔄 In Progress
-- ✅ Done
-- ⏸️ On Hold

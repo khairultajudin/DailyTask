@@ -456,9 +456,12 @@ function escAttr(s) {
 
 function renderSections(filter) {
   const host = document.getElementById('sections');
+  // Done sections always render last, so the active work stays on top.
+  const isDoneSec = s => /^✅/.test(s.title);
+  const sections = DATA.sections.slice().sort((a, b) => isDoneSec(a) - isDoneSec(b));
   let lastBucket = null;
   let html = '';
-  DATA.sections.forEach(sec => {
+  sections.forEach(sec => {
     const shown = [];
     sec.rows.forEach((r, idx) => {
       const st = resolveStatus(sec.bucket, sec.title, idx);

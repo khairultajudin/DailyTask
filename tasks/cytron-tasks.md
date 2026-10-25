@@ -74,6 +74,23 @@ Berdasarkan data (kuat tapi belum cover):
 
 ---
 
+## 📌 Ongoing / Recurring
+
+- Monthly tutorial checking
+- Weekly tutorial improvement checklist
+- Update Khairul's Tutorial List to ActiveCampaign
+- Cytron Insights data collection (Jan–Oct complete; Oct partial)
+
+---
+
+## Status Legend
+- ⏳ Pending
+- 🔄 In Progress
+- ✅ Done
+- ⏸️ On Hold
+
+---
+
 ## ✅ Done
 
 | # | Task | Tarikh | Nota |
@@ -89,20 +106,3 @@ Berdasarkan data (kuat tapi belum cover):
 | 9 | Industrial articles (18) | Jul–Sept | IRIV, Workshop, AI |
 | 10 | Promotion Nomination Form | 9 Oct | Dah submit. Proposed: Senior Marketing Engineer, L3 |
 | 11 | Cytron Insights Tutorial — topic finalized | 13 Oct | 12 topik dipilih dari data Jan–Oct |
-
----
-
-## 📌 Ongoing / Recurring
-
-- Monthly tutorial checking
-- Weekly tutorial improvement checklist
-- Update Khairul's Tutorial List to ActiveCampaign
-- Cytron Insights data collection (Jan–Oct complete; Oct partial)
-
----
-
-## Status Legend
-- ⏳ Pending
-- 🔄 In Progress
-- ✅ Done
-- ⏸️ On Hold

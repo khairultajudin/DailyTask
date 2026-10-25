@@ -12,6 +12,7 @@ Satu fail HTML, tiada *framework*, tiada *build step* masa penggunaan — double
 - **6 kad statistik** — Pending · In Progress · Done · On Hold · Upcoming · Jumlah
 - **9 seksyen** — Rumah, Projek Peribadi, Next Ideas, Done (personal) + Pending Cytron,
   Tutorial Plan Q4, Slot Kosong, Weekly Focus, Done (Cytron)
+- **Seksyen Done sentiasa di bawah** — kerja aktif kekal di atas halaman
 - **Butang filter** ikut status — Semua / Pending / In Progress / On Hold / Done
 - **Edit dalam halaman** — tukar status terus dari dashboard, tersimpan dalam localStorage
 - **Progress bar + peratusan** untuk setiap seksyen
