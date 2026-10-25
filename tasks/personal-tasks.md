@@ -28,9 +28,9 @@
 |---|------|--------|------|
 | 1 | BizTrack (Pelanggan A) | 🔄 Ongoing | Langganan bulanan dah bayar. Upgrade 3 ciri: (1) upload PDF invois, (2) tambah cawangan, (3) kawalan akses gaji staf. Spec: BizTrack/docs/upgrade-pelanggan-a-2026-10.md |
 | 2 | AmOLED ESP32 | ⏳ | Clamp design |
-| 3 | Airfryer dashboard | ⏳ | Siap. Display ke website. |
+| 3 | Airfryer dashboard | ✅ | Siap. Display ke website. |
 | 4 | TikTok video | ⏳ | 4 video dah edit. Tambah voice audio. |
-| 5 | Semak caruman KWSP | ⏳ | |
+| 5 | Semak caruman KWSP | ✅ |  |
 | 6 | Bayar pinjaman PTPTN guna KWSP | ⏳ | |
 | 7 | Buat akaun bank | ⏳ | |
 | 8 | Hydroponic Kratky | ✅ | Siap. Platform temporary + design baru menyusul sebagai project baharu. |
@@ -41,9 +41,9 @@
 
 | # | Idea | Status | Nota |
 |---|------|--------|------|
-| 1 | Invoice system | ⏳ | Development. Generate invoice terus. |
+| 1 | Invoice system | 🔄 | Development. Generate invoice terus. |
 | 2 | System keluar masuk duit | ⏳ | |
-| 3 | Summary duit MK Venture | ⏳ | |
+| 3 | Summary duit MK Venture | 🔄 |  |
 | 4 | Summary duit personal | ⏳ | |
 | 5 | Video cara buat logo sekolah | ⏳ | |
 | 6 | Follow up payment invois | ✅ | Pelanggan dah bayar. Bengkel 18 Oct |

@@ -12,7 +12,7 @@
 |---|------|----------|------|
 | 1 | Settle uncategorised tutorials | P1 | 🔄 In Progress — dah start, belum habis |
 | 2 | Revamp old tutorials | P2 | |
-| 3 | Update Tutorial Guide (Intern & Staff) | P2 | Update existing guide |
+| 3 | Update Tutorial Guide (Intern & Staff) | P2 | ✅ |
 | 4 | AI Coding Pack — utilize utk Maker ESP32 | P1 | |
 | 5 | New look Cytron homepage | P2 | Minor edit. Draft pakai claude dah siap. |
 | 6 | Tutorial categories | P1 | Belum selesai — tengah cari masa |
@@ -32,7 +32,7 @@
 
 > Berdasarkan data Jan–Oct 2026 (254 PDF + 33 dashboard).
 > 10 topik disahkan + 2 slot kosong (isi kemudian bila ada insight baharu).
-> **Constraint:** 3D Printing / filament **tidak lagi diliput** (keputusan Cytron).
+> Constraint: 3D Printing / filament tidak lagi diliput (keputusan Cytron).
 
 | Minggu | Tarikh | Topik | Jenis | Evidence |
 |--------|--------|-------|-------|----------|
