@@ -32,7 +32,7 @@
 
 > Berdasarkan data Jan–Oct 2026 (254 PDF + 33 dashboard).
 > 10 topik disahkan + 2 slot kosong (isi kemudian bila ada insight baharu).
-> Constraint: 3D Printing / filament tidak lagi diliput (keputusan Cytron).
+> **Constraint:** 3D Printing / filament **tidak lagi diliput** (keputusan Cytron).
 
 | Minggu | Tarikh | Topik | Jenis | Evidence |
 |--------|--------|-------|-------|----------|
