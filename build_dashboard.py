@@ -14,6 +14,8 @@ committed back to the source files.
 Run:  python3 build_dashboard.py
 """
 import json
+import sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import re
 from datetime import datetime
 from pathlib import Path
@@ -32,6 +34,7 @@ STATUS_LABEL = {
     "✅": "Done",
     "⏸️": "On Hold",
     "🔜": "Upcoming",
+    "❌": "Cancel",
 }
 STATUS_CLASS = {
     "⏳": "pending",
@@ -39,6 +42,7 @@ STATUS_CLASS = {
     "✅": "done",
     "⏸️": "hold",
     "🔜": "upcoming",
+    "❌": "cancel",
 }
 
 
@@ -82,6 +86,8 @@ def status_of(cells):
         return "🔄"
     if "done" in low or "settled" in low:
         return "✅"
+    if "cancel" in low or "batal" in low:
+        return "❌"
     return ""
 
 
@@ -94,7 +100,7 @@ def build_data():
         groups.append((BUCKET_OF[name], name, text))
 
     sections = []
-    counters = {"pending": 0, "progress": 0, "done": 0, "hold": 0, "upcoming": 0, "total": 0}
+    counters = {"pending": 0, "progress": 0, "done": 0, "hold": 0, "upcoming": 0, "cancel": 0, "total": 0}
 
     for bucket, path, text in groups:
         for title, kind, payload in parse_tables(text):
@@ -200,6 +206,10 @@ TEMPLATE = r"""<!DOCTYPE html>
   .pill.hold{background:#371626; color:var(--hold)}
   .pill.upcoming{background:#2b1e44; color:#c4b5fd}
   .pill.none{background:var(--panel2); color:var(--dim); font-weight:500}
+  .pill.cancel{background:#3b1414; color:#f87171}
+  .stat.cancel .n{color:#f87171}
+  .pick.on.cancel{background:#ef4444; border-color:#ef4444; color:#fff}
+  .controls .btn[data-f="cancel"].on{background:#dc2626; border-color:#ef4444; color:#fff}
   /* --- editor --- */
   .editmode .statuscell{cursor:pointer; outline:1px dashed var(--line); outline-offset:-1px}
   .editmode .statuscell:hover{outline-color:var(--accent2); background:#14202f}
@@ -337,6 +347,7 @@ td.notes:empty:before {
     <button class="btn" data-f="progress">🔄 In Progress</button>
     <button class="btn" data-f="hold">⏸️ On Hold</button>
     <button class="btn" data-f="done">✅ Done</button>
+    <button class="btn" data-f="cancel">❌ Cancel</button>
   </div>
 
   <main id="sections"></main>
@@ -387,11 +398,11 @@ document.getElementById('stamp').textContent = 'Dikemaskini: ' + DATA.generated;
 
 const STORE_KEY = 'kai-task-status-v1';
 const NOTE_STORE_KEY = 'kai-task-notes-v1';
-const STATUS_KEYS = ['pending', 'progress', 'done', 'hold', 'upcoming'];
-const STATUS_ICON = {pending:'⏳', progress:'🔄', done:'✅', hold:'⏸️', upcoming:'🔜'};
-const STATUS_LABEL = {pending:'Pending', progress:'In Progress', done:'Done', hold:'On Hold', upcoming:'Upcoming'};
-const STATUS_MD = {pending:'⏳', progress:'🔄', done:'✅', hold:'⏸️', upcoming:'🔜', none:'—'};
-const ICON_TO_KEY = {'⏳':'pending','🔄':'progress','✅':'done','⏸️':'hold','🔜':'upcoming'};
+const STATUS_KEYS = ['pending', 'progress', 'done', 'hold', 'upcoming', 'cancel'];
+const STATUS_ICON = {pending:'⏳', progress:'🔄', done:'✅', hold:'⏸️', upcoming:'🔜', cancel:'❌'};
+const STATUS_LABEL = {pending:'Pending', progress:'In Progress', done:'Done', hold:'On Hold', upcoming:'Upcoming', cancel:'Cancel'};
+const STATUS_MD = {pending:'⏳', progress:'🔄', done:'✅', hold:'⏸️', upcoming:'🔜', cancel:'❌', none:'—'};
+const ICON_TO_KEY = {'⏳':'pending','🔄':'progress','✅':'done','⏸️':'hold','🔜':'upcoming','❌':'cancel'};
 
 // ---------- change log (localStorage) ----------
 const loadLog = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e){ return {}; } };
@@ -479,7 +490,7 @@ function normStatus(v) {
   const s = String(v).trim();
   if (s === '' || s === '—' || s === '-' || s === 'none') return null;
   if (STATUS_KEYS.includes(s)) return s;
-  const m = s.match(/^(⏳|🔄|✅|⏸️|🔜)/);
+  const m = s.match(/^(⏳|🔄|✅|⏸️|🔜|❌)/);
   if (m) return ICON_TO_KEY[m[1]];
   const low = s.toLowerCase();
   for (const k of STATUS_KEYS) if (low.includes(STATUS_LABEL[k].toLowerCase())) return k;
@@ -581,7 +592,7 @@ document.body.classList.add('editmode');
 
 // ---------- counters & renderers ----------
 function computeCounters() {
-  const c = {pending:0, progress:0, done:0, hold:0, upcoming:0, total:0};
+  const c = {pending:0, progress:0, done:0, hold:0, upcoming:0, cancel:0, total:0};
   DATA.sections.forEach(sec => {
     sec.rows.forEach((r, idx) => {
       c.total++;
@@ -600,6 +611,7 @@ function renderStats() {
     {k:'done', n:c.done, l:'Done', cls:'done'},
     {k:'hold', n:c.hold, l:'On Hold', cls:'hold'},
     {k:'upcoming', n:c.upcoming, l:'Upcoming', cls:'upcoming'},
+    {k:'cancel', n:c.cancel, l:'Cancel', cls:'cancel'},
     {k:'total', n:c.total, l:'Jumlah', cls:''},
   ];
   document.getElementById('stats').innerHTML = cards.map(x =>
@@ -620,6 +632,7 @@ function escAttr(s) {
 function renderSections(filter) {
   const host = document.getElementById('sections');
   const isDoneSec = s => /^✅/.test(s.title);
+  const isDoneOrCancel = st => (st === 'done' || st === 'cancel');
   const buckets = ['Personal', 'Cytron'];
   let html = '';
 
@@ -638,14 +651,13 @@ function renderSections(filter) {
       const shown = [];
       const stIdx = statusCol(sec);
       const nIdx = noteCol(sec);
-      const hasNotes = nIdx >= 0;
       const header = stIdx >= 0 ? sec.header : [...sec.header, 'Status'];
 
       let secDoneCount = 0;
       sec.rows.forEach((r, idx) => {
         const st = resolveStatus(sec.bucket, sec.title, idx);
         const curNoteVal = resolveNote(sec.bucket, sec.title, idx);
-        if (st === 'done') {
+        if (isDoneOrCancel(st)) {
           secDoneCount++;
           const taskName = r.cells[1] || r.cells[0] || '';
           allDoneRows.push({
@@ -654,9 +666,9 @@ function renderSections(filter) {
             origIdx: idx,
             taskName: taskName,
             secTag: sec.title.replace(/^[^a-zA-Z0-9\s]+/, '').split('(')[0].trim(),
-            date: 'Selesai',
+            date: st === 'cancel' ? 'Batal' : 'Selesai',
             note: curNoteVal,
-            status: 'done'
+            status: st
           });
         } else {
           if (filter === 'all' || st === filter) {
@@ -710,7 +722,7 @@ function renderSections(filter) {
 
       doneSec.rows.forEach((r, idx) => {
         const st = resolveStatus(doneSec.bucket, doneSec.title, idx) || 'done';
-        if (st === 'done') {
+        if (isDoneOrCancel(st)) {
           const curNoteVal = resolveNote(doneSec.bucket, doneSec.title, idx);
           allDoneRows.push({
             origBucket: doneSec.bucket,
@@ -731,16 +743,29 @@ function renderSections(filter) {
     }
   });
 
-  // Render ONE unified Done section at the very bottom
-  if (allDoneRows.length && (filter === 'all' || filter === 'done')) {
+  // Filter rows for the Done/Cancel table
+  const doneTableRows = allDoneRows.filter(r => {
+    if (filter === 'all') return true;
+    if (filter === 'done') return r.status === 'done';
+    if (filter === 'cancel') return r.status === 'cancel';
+    return false;
+  });
+
+  // Render ONE unified Done & Cancel section at the very bottom
+  if (doneTableRows.length && (filter === 'all' || filter === 'done' || filter === 'cancel')) {
+    const doneCount = doneTableRows.filter(r => r.status === 'done').length;
+    const cancelCount = doneTableRows.filter(r => r.status === 'cancel').length;
+    const totalDoneCard = doneTableRows.length;
+    const pct = totalDoneCard ? Math.round((doneCount / totalDoneCard) * 100) : 0;
+
     html += `
-    <h2>✅ Selesai <span class="tag">Personal &amp; Cytron</span></h2>
+    <h2>✅ Selesai &amp; ❌ Dibatalkan <span class="tag">Personal &amp; Cytron</span></h2>
     <div class="card">
       <div class="head">
-        <span class="t">✅ Done</span>
-        <span class="c">${allDoneRows.length} item · ${allDoneRows.length} done (100%)</span>
+        <span class="t">✅ Selesai &amp; ❌ Dibatalkan</span>
+        <span class="c">${totalDoneCard} item · ${doneCount} selesai · ${cancelCount} batal</span>
       </div>
-      <div class="bar"><i style="width:100%"></i></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
       <table>
         <thead>
           <tr>
@@ -753,7 +778,7 @@ function renderSections(filter) {
           </tr>
         </thead>
         <tbody>
-          ${allDoneRows.map((r, i) => {
+          ${doneTableRows.map((r, i) => {
             const cellId = r.origIdx + '-' + hashCode(r.origBucket + '|' + r.origTitle);
             const categoryBadge = r.origBucket === 'Cytron'
               ? '<span class="tag" style="background:#0284c7;color:#fff;border-color:#38bdf8;font-weight:600;">🛠 Cytron</span>'
