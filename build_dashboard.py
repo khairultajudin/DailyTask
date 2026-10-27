@@ -234,6 +234,85 @@ TEMPLATE = r"""<!DOCTYPE html>
     th,td{padding:9px 10px; font-size:12.5px}
     .card .head .t{font-size:13.5px}
   }
+
+/* Floating save popup */
+.save-popup {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(120px);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.25);
+  border-radius: 9999px;
+  padding: 8px 14px 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+.save-popup.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.save-popup-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+.save-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-dot 1.8s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+.save-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.save-actions .btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 9999px;
+}
+/* Editable notes */
+td.notes {
+  cursor: text;
+  min-width: 140px;
+  outline: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  transition: background 0.15s, border-color 0.15s;
+}
+td.notes:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+td.notes:focus {
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 1px #10b981;
+}
+td.notes:empty:before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  opacity: 0.55;
+  font-style: italic;
+}
+
 </style>
 </head>
 <body>
@@ -246,7 +325,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="editbar">
     <button class="btn" id="editToggle" type="button">✏️ Edit Status</button>
     <button class="btn act" id="saveMd" type="button" disabled>💾 Simpan</button>
-    <span class="note" id="editNote">Klik “Edit Status”, kemudian klik mana-mana sel status untuk tukar.</span>
+    <span class="note" id="editNote">Klik mana-mana status atau ruangan nota untuk edit terus di sini.</span>
   </div>
 
   <div id="diffbar"></div>
@@ -269,6 +348,16 @@ TEMPLATE = r"""<!DOCTYPE html>
   </footer>
 </div>
 
+  <div id="savePopup" class="save-popup" role="alert">
+    <div class="save-popup-content">
+      <span class="save-dot"></span>
+      <span class="save-msg">Ada <strong id="changeCount">1</strong> perubahan belum disimpan</span>
+    </div>
+    <div class="save-actions">
+      <button class="btn act" id="savePopupBtn" type="button">💾 Simpan</button>
+      <button class="btn" id="discardPopupBtn" type="button">Batal</button>
+    </div>
+  </div>
 <div id="toast"></div>
 
 <script>
@@ -297,6 +386,7 @@ try {
 document.getElementById('stamp').textContent = 'Dikemaskini: ' + DATA.generated;
 
 const STORE_KEY = 'kai-task-status-v1';
+const NOTE_STORE_KEY = 'kai-task-notes-v1';
 const STATUS_KEYS = ['pending', 'progress', 'done', 'hold', 'upcoming'];
 const STATUS_ICON = {pending:'⏳', progress:'🔄', done:'✅', hold:'⏸️', upcoming:'🔜'};
 const STATUS_LABEL = {pending:'Pending', progress:'In Progress', done:'Done', hold:'On Hold', upcoming:'Upcoming'};
@@ -307,6 +397,10 @@ const ICON_TO_KEY = {'⏳':'pending','🔄':'progress','✅':'done','⏸️':'ho
 const loadLog = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e){ return {}; } };
 const saveLog = o => { try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch(e){} };
 let changeLog = loadLog();
+
+const loadNoteLog = () => { try { return JSON.parse(localStorage.getItem(NOTE_STORE_KEY) || '{}'); } catch(e){ return {}; } };
+const saveNoteLog = o => { try { localStorage.setItem(NOTE_STORE_KEY, JSON.stringify(o)); } catch(e){} };
+let noteLog = loadNoteLog();
 
 function hashCode(s) {
   let h = 0;
@@ -321,6 +415,10 @@ function statusCol(sec) {
   return sec.header.findIndex(h => /status/i.test(h));
 }
 
+function noteCol(sec) {
+  return sec.header.findIndex(h => /nota|note|evidence|kenapa sesuai|catatan/i.test(h));
+}
+
 function keyOf(bucket, title, idx) { return bucket + '||' + title + '||' + idx; }
 
 function origStatus(bucket, title, idx) {
@@ -333,14 +431,11 @@ function origStatus(bucket, title, idx) {
     fromCell = normStatus(cells[stIdx]);
   }
   if (!fromCell) {
-    // No Status column (or an empty one): scan every cell, like the Python build
-    // does — e.g. "🔄 In Progress" written inside the Nota column.
     for (const c of cells) {
       fromCell = normStatus(c);
       if (fromCell) break;
     }
   }
-  // Rows whose cell is empty inherit the section's status (e.g. "## ✅ Done").
   return fromCell || sec.default || null;
 }
 
@@ -348,6 +443,35 @@ function resolveStatus(bucket, title, idx) {
   const k = keyOf(bucket, title, idx);
   if (changeLog[k]) return changeLog[k];
   return origStatus(bucket, title, idx);
+}
+
+function origNote(bucket, title, idx) {
+  const sec = SECTION_INDEX[bucket + '||' + title];
+  if (!sec || !sec.rows[idx]) return '';
+  const nIdx = noteCol(sec);
+  if (nIdx >= 0 && sec.rows[idx].cells.length > nIdx) {
+    return sec.rows[idx].cells[nIdx] || '';
+  }
+  return '';
+}
+
+function resolveNote(bucket, title, idx) {
+  const k = keyOf(bucket, title, idx);
+  if (k in noteLog) return noteLog[k];
+  return origNote(bucket, title, idx);
+}
+
+function applyNote(bucket, title, idx, text) {
+  const k = keyOf(bucket, title, idx);
+  const before = origNote(bucket, title, idx);
+  const clean = (text || '').trim();
+  if (clean === (before || '').trim()) {
+    delete noteLog[k];
+  } else {
+    noteLog[k] = clean;
+  }
+  saveNoteLog(noteLog);
+  updateSaveUI();
 }
 
 function normStatus(v) {
@@ -362,10 +486,12 @@ function normStatus(v) {
   return null;
 }
 
-function hasChanges() { return Object.keys(changeLog).length > 0; }
+function hasChanges() {
+  return Object.keys(changeLog).length > 0 || Object.keys(noteLog).length > 0;
+}
 
-// ---------- edit mode ----------
-let editMode = false;
+// ---------- live direct edit (always enabled) ----------
+let editMode = true;
 let openPicker = null;
 
 const editToggle = document.getElementById('editToggle');
@@ -373,6 +499,21 @@ const saveBtn = document.getElementById('saveMd');
 const editNote = document.getElementById('editNote');
 const toastEl = document.getElementById('toast');
 const diffbar = document.getElementById('diffbar');
+const savePopup = document.getElementById('savePopup');
+const changeCountEl = document.getElementById('changeCount');
+
+function updateSaveUI() {
+  const total = (Object.keys(changeLog).length) + (Object.keys(noteLog).length);
+  if (saveBtn) saveBtn.disabled = (total === 0);
+  if (savePopup) {
+    if (total > 0) {
+      if (changeCountEl) changeCountEl.textContent = total;
+      savePopup.classList.add('show');
+    } else {
+      savePopup.classList.remove('show');
+    }
+  }
+}
 
 function toast(msg) {
   toastEl.textContent = msg;
@@ -383,13 +524,12 @@ function toast(msg) {
 
 function closePicker() {
   if (!openPicker) return;
-  const td = document.getElementById('sc-' + openPicker.cellId);
-  if (td) td.innerHTML = pillHtml(openPicker.status);
+  const el = document.getElementById('sc-' + openPicker.cellId);
+  if (el) el.innerHTML = pillHtml(openPicker.status);
   openPicker = null;
 }
 
 function openPickerFor(td) {
-  if (!editMode) return;
   closePicker();
   const bucket = td.dataset.bucket, title = td.dataset.title, idx = +td.dataset.idx;
   const cur = resolveStatus(bucket, title, idx);
@@ -409,41 +549,44 @@ function applyStatus(status) {
   const p = openPicker;
   if (!p) return;
   const k = keyOf(p.bucket, p.title, p.idx);
-  const before = resolveStatus(p.bucket, p.title, p.idx);
-  if (status === before) { closePicker(); return; }
-  if (status) changeLog[k] = status; else delete changeLog[k];
+  const before = origStatus(p.bucket, p.title, p.idx);
+  if (status === before) {
+    delete changeLog[k];
+  } else if (status) {
+    changeLog[k] = status;
+  } else {
+    changeLog[k] = 'none';
+  }
   saveLog(changeLog);
   openPicker = null;
   renderAll();
-  saveBtn.disabled = !hasChanges();
+  updateSaveUI();
   toast(status ? ('Ditukar kepada ' + STATUS_ICON[status] + ' ' + STATUS_LABEL[status])
                : 'Status dibuang');
 }
 
-editToggle.addEventListener('click', () => {
-  editMode = !editMode;
-  document.body.classList.toggle('editmode', editMode);
-  editToggle.classList.toggle('on', editMode);
-  editToggle.textContent = editMode ? '✏️ Edit: ON' : '✏️ Edit Status';
-  editNote.textContent = editMode
-    ? 'Klik mana-mana sel status untuk tukar. Tekan butang yang sama untuk tamat.'
-    : 'Klik “Edit Status”, kemudian klik mana-mana sel status untuk tukar.';
-  closePicker();
-  renderAll();
-});
+if (editToggle) {
+  editToggle.textContent = '✏️ Edit: ON';
+  editToggle.classList.add('on');
+  editToggle.addEventListener('click', () => {
+    editMode = !editMode;
+    document.body.classList.toggle('editmode', editMode);
+    editToggle.classList.toggle('on', editMode);
+    editToggle.textContent = editMode ? '✏️ Edit: ON' : '✏️ Edit Status';
+    closePicker();
+    renderAll();
+  });
+}
+document.body.classList.add('editmode');
 
-document.addEventListener('click', e => {
-  if (openPicker && !e.target.closest('.statuscell') && !e.target.closest('.picker')) closePicker();
-});
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closePicker(); });
-
-// ---------- rendering ----------
+// ---------- counters & renderers ----------
 function computeCounters() {
   const c = {pending:0, progress:0, done:0, hold:0, upcoming:0, total:0};
   DATA.sections.forEach(sec => {
     sec.rows.forEach((r, idx) => {
+      c.total++;
       const st = resolveStatus(sec.bucket, sec.title, idx);
-      if (st) { c[st]++; c.total++; }
+      if (st && c[st] !== undefined) c[st]++;
     });
   });
   return c;
@@ -494,16 +637,17 @@ function renderSections(filter) {
     activeSecs.forEach(sec => {
       const shown = [];
       const stIdx = statusCol(sec);
-      const hasNotes = sec.header.some(h => /nota|evidence/i.test(h));
+      const nIdx = noteCol(sec);
+      const hasNotes = nIdx >= 0;
       const header = stIdx >= 0 ? sec.header : [...sec.header, 'Status'];
 
       let secDoneCount = 0;
       sec.rows.forEach((r, idx) => {
         const st = resolveStatus(sec.bucket, sec.title, idx);
+        const curNoteVal = resolveNote(sec.bucket, sec.title, idx);
         if (st === 'done') {
           secDoneCount++;
           const taskName = r.cells[1] || r.cells[0] || '';
-          const note = hasNotes ? (r.cells[sec.header.length - 1] || '') : '';
           allDoneRows.push({
             origBucket: sec.bucket,
             origTitle: sec.title,
@@ -511,7 +655,7 @@ function renderSections(filter) {
             taskName: taskName,
             secTag: sec.title.replace(/^[^a-zA-Z0-9\s]+/, '').split('(')[0].trim(),
             date: 'Selesai',
-            note: note,
+            note: curNoteVal,
             status: 'done'
           });
         } else {
@@ -541,10 +685,13 @@ function renderSections(filter) {
               return `<tr>${
                 header.map((h, i) => {
                   if (i === stIdx || (stIdx < 0 && i === header.length - 1)) {
-                    return `<td class="statuscell"${editMode ? ` tabindex="0" role="button" data-bucket="${escAttr(sec.bucket)}" data-title="${escAttr(sec.title)}" data-idx="${r.idx}" data-cell-id="${cellId}" id="sc-${cellId}"` : ''}>${pillHtml(r.status)}</td>`;
+                    return `<td class="statuscell" tabindex="0" role="button" data-bucket="${escAttr(sec.bucket)}" data-title="${escAttr(sec.title)}" data-idx="${r.idx}" data-cell-id="${cellId}" id="sc-${cellId}">${pillHtml(r.status)}</td>`;
                   }
-                  const cls = (i === 0 && /^\d+$/.test(r.cells[i] || '')) ? 'num'
-                            : (hasNotes && i === sec.header.length - 1 && stIdx < 0 ? 'notes' : '');
+                  if (i === nIdx) {
+                    const noteText = resolveNote(sec.bucket, sec.title, r.idx);
+                    return `<td class="notes" contenteditable="true" data-bucket="${escAttr(sec.bucket)}" data-title="${escAttr(sec.title)}" data-idx="${r.idx}" data-placeholder="Tambah nota...">${escAttr(noteText || '')}</td>`;
+                  }
+                  const cls = (i === 0 && /^\d+$/.test(r.cells[i] || '')) ? 'num' : '';
                   return `<td class="${cls}">${r.cells[i] ?? ''}</td>`;
                 }).join('')
               }</tr>`;
@@ -559,11 +706,12 @@ function renderSections(filter) {
       const taskColIdx = doneSec.header.findIndex(h => /task|perkara|projek/i.test(h)) >= 0
         ? doneSec.header.findIndex(h => /task|perkara|projek/i.test(h)) : 1;
       const dateColIdx = doneSec.header.findIndex(h => /tarikh|date/i.test(h));
-      const noteColIdx = doneSec.header.findIndex(h => /nota|catatan/i.test(h));
+      const nIdx = noteCol(doneSec);
 
       doneSec.rows.forEach((r, idx) => {
         const st = resolveStatus(doneSec.bucket, doneSec.title, idx) || 'done';
         if (st === 'done') {
+          const curNoteVal = resolveNote(doneSec.bucket, doneSec.title, idx);
           allDoneRows.push({
             origBucket: doneSec.bucket,
             origTitle: doneSec.title,
@@ -571,7 +719,7 @@ function renderSections(filter) {
             taskName: r.cells[taskColIdx] || r.cells[1] || r.cells[0] || '',
             secTag: '',
             date: dateColIdx >= 0 ? (r.cells[dateColIdx] || '—') : '—',
-            note: noteColIdx >= 0 ? (r.cells[noteColIdx] || '') : '',
+            note: curNoteVal || (nIdx >= 0 ? r.cells[nIdx] : ''),
             status: st
           });
         }
@@ -618,8 +766,8 @@ function renderSections(filter) {
               <td style="white-space:nowrap;">${categoryBadge}</td>
               <td>${originTag}${escAttr(r.taskName)}</td>
               <td style="white-space:nowrap;color:var(--muted);">${escAttr(r.date)}</td>
-              <td class="notes">${escAttr(r.note)}</td>
-              <td class="statuscell"${editMode ? ` tabindex="0" role="button" data-bucket="${escAttr(r.origBucket)}" data-title="${escAttr(r.origTitle)}" data-idx="${r.origIdx}" data-cell-id="${cellId}" id="sc-${cellId}"` : ''}>${pillHtml(r.status)}</td>
+              <td class="notes" contenteditable="true" data-bucket="${escAttr(r.origBucket)}" data-title="${escAttr(r.origTitle)}" data-idx="${r.origIdx}" data-placeholder="Tambah nota...">${escAttr(r.note || '')}</td>
+              <td class="statuscell" tabindex="0" role="button" data-bucket="${escAttr(r.origBucket)}" data-title="${escAttr(r.origTitle)}" data-idx="${r.origIdx}" data-cell-id="${cellId}" id="sc-${cellId}">${pillHtml(r.status)}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -628,11 +776,24 @@ function renderSections(filter) {
   }
 
   host.innerHTML = html || '<p class="stamp">Tiada item dalam filter ini.</p>';
-  if (editMode) {
+
+  // Attach interactive listeners for status and notes
+  if (host && typeof host.querySelectorAll === 'function') {
     host.querySelectorAll('td.statuscell').forEach(td => {
       td.addEventListener('click', () => openPickerFor(td));
       td.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPickerFor(td); }
+      });
+    });
+
+    host.querySelectorAll('td.notes[contenteditable="true"]').forEach(td => {
+      td.addEventListener('input', () => {
+        const b = td.dataset.bucket, t = td.dataset.title, idx = +td.dataset.idx;
+        applyNote(b, t, idx, td.innerText);
+      });
+      td.addEventListener('blur', () => {
+        const b = td.dataset.bucket, t = td.dataset.title, idx = +td.dataset.idx;
+        applyNote(b, t, idx, td.innerText);
       });
     });
   }
@@ -692,16 +853,37 @@ function getModifiedFiles() {
       rowIdx++;
       const st = resolveStatus(bucket, section, rowIdx);
       const before = origStatus(bucket, section, rowIdx);
-      if (st === before) continue;
+      const curN = resolveNote(bucket, section, rowIdx);
+      const origN = origNote(bucket, section, rowIdx);
+
+      const stChanged = (st !== before);
+      const noteChanged = (curN !== origN);
+
+      if (!stChanged && !noteChanged) continue;
+
       const sec = SECTION_INDEX[bucket + '||' + section];
       const stIdx = sec ? statusCol(sec) : -1;
+      const nIdx = sec ? noteCol(sec) : -1;
       const newCells = cells.slice();
-      if (stIdx >= 0) {
-        while (newCells.length <= stIdx) newCells.push('');
-        newCells[stIdx] = st ? STATUS_MD[st] : STATUS_MD.none;
-      } else {
-        newCells.push(st ? STATUS_MD[st] : STATUS_MD.none);
+
+      if (stChanged) {
+        if (stIdx >= 0) {
+          while (newCells.length <= stIdx) newCells.push('');
+          newCells[stIdx] = st ? STATUS_MD[st] : STATUS_MD.none;
+        } else {
+          newCells.push(st ? STATUS_MD[st] : STATUS_MD.none);
+        }
       }
+
+      if (noteChanged) {
+        if (nIdx >= 0) {
+          while (newCells.length <= nIdx) newCells.push('');
+          newCells[nIdx] = curN;
+        } else {
+          newCells.push(curN);
+        }
+      }
+
       lines[li] = '| ' + newCells.join(' | ') + ' |';
       changed++;
     }
@@ -716,10 +898,10 @@ function renderMarkdown() {
   const mod = getModifiedFiles();
   const out = [];
   for (const [file, item] of Object.entries(mod)) {
-    out.push('### ' + file + '  (' + item.changed + ' baris diubah)\n\n```markdown\n'
-             + item.content + '\n```');
+    out.push('### ' + file + '  (' + item.changed + ' baris diubah)\\n\\n```markdown\\n'
+             + item.content + '\\n```');
   }
-  return out.join('\n\n');
+  return out.join('\\n\\n');
 }
 
 saveBtn.addEventListener('click', async () => {
@@ -732,10 +914,12 @@ saveBtn.addEventListener('click', async () => {
 
   saveBtn.disabled = true;
   saveBtn.textContent = '⏳ Menyimpan...';
+  const popupSaveBtn = document.getElementById('savePopupBtn');
+  if (popupSaveBtn) { popupSaveBtn.disabled = true; popupSaveBtn.textContent = '⏳ Menyimpan...'; }
   toast('Menyimpan ke GitHub...');
 
   try {
-    // 1. Commit changes into in-memory DATA.sections and DATA.counters
+    // 1. Commit statuses into in-memory DATA
     for (const [k, newSt] of Object.entries(changeLog)) {
       const parts = k.split('||');
       const b = parts[0], t = parts[1], i = +parts[2];
@@ -755,6 +939,20 @@ saveBtn.addEventListener('click', async () => {
       }
     }
 
+    // 2. Commit notes into in-memory DATA
+    for (const [k, newNote] of Object.entries(noteLog)) {
+      const parts = k.split('||');
+      const b = parts[0], t = parts[1], i = +parts[2];
+      const sec = SECTION_INDEX[b + '||' + t];
+      if (sec && sec.rows[i]) {
+        const nIdx = noteCol(sec);
+        if (nIdx >= 0) {
+          while (sec.rows[i].cells.length <= nIdx) sec.rows[i].cells.push('');
+          sec.rows[i].cells[nIdx] = newNote;
+        }
+      }
+    }
+
     for (const file of fileNames) {
       DATA._sources[file] = modFiles[file].content;
     }
@@ -764,8 +962,8 @@ saveBtn.addEventListener('click', async () => {
     try {
       if (typeof document !== 'undefined' && document.documentElement) {
         closePicker();
-        const curHtml = '<!DOCTYPE html>\n<html lang="ms">\n' + document.documentElement.innerHTML + '\n</html>';
-        indexHtml = curHtml.replace(/const DATA = \{.*?\};\n/s, 'const DATA = ' + JSON.stringify(DATA) + ';\n');
+        const curHtml = '<!DOCTYPE html>\\n<html lang="ms">\\n' + document.documentElement.innerHTML + '\\n</html>';
+        indexHtml = curHtml.replace(/const DATA = \{.*?\};\n/s, 'const DATA = ' + JSON.stringify(DATA) + ';\\n');
       }
     } catch(e){}
 
@@ -788,7 +986,7 @@ saveBtn.addEventListener('click', async () => {
       }
     }
 
-    // 2. Persist updated baseline in localStorage
+    // 3. Persist updated baseline in localStorage
     try {
       localStorage.setItem(BASELINE_KEY, JSON.stringify({
         sections: DATA.sections,
@@ -797,11 +995,15 @@ saveBtn.addEventListener('click', async () => {
         timestamp: Date.now()
       }));
       localStorage.removeItem(STORE_KEY);
+      localStorage.removeItem(NOTE_STORE_KEY);
     } catch(e){}
 
     changeLog = {};
+    noteLog = {};
     saveBtn.disabled = true;
     saveBtn.textContent = '💾 Simpan';
+    if (popupSaveBtn) { popupSaveBtn.disabled = true; popupSaveBtn.textContent = '💾 Simpan'; }
+    updateSaveUI();
     diffbar.classList.remove('show');
     toast('✅ Berjaya disimpan! Dashboard telah dikemas kini.');
     renderAll();
@@ -809,13 +1011,30 @@ saveBtn.addEventListener('click', async () => {
     console.error(err);
     saveBtn.disabled = false;
     saveBtn.textContent = '💾 Simpan Semula';
+    if (popupSaveBtn) { popupSaveBtn.disabled = false; popupSaveBtn.textContent = '💾 Simpan Semula'; }
     toast('❌ Ralat: ' + (err.message || err));
 
     const md = renderMarkdown();
-    diffbar.innerHTML = '<span class="fh">— Auto-save gagal (' + (err.message || err) + ') —</span>\n'
-                      + 'Salin kandungan di bawah secara manual:\n\n'
+    diffbar.innerHTML = '<span class="fh">— Auto-save gagal (' + (err.message || err) + ') —</span>\\n'
+                      + 'Salin kandungan di bawah secara manual:\\n\\n'
                       + md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     diffbar.classList.add('show');
+  }
+});
+
+// Floating popup actions
+document.getElementById('savePopupBtn')?.addEventListener('click', () => saveBtn.click());
+document.getElementById('discardPopupBtn')?.addEventListener('click', () => {
+  if (confirm('Batalkan semua perubahan yang belum disimpan?')) {
+    changeLog = {};
+    noteLog = {};
+    try {
+      localStorage.removeItem(STORE_KEY);
+      localStorage.removeItem(NOTE_STORE_KEY);
+    } catch(e){}
+    updateSaveUI();
+    renderAll();
+    toast('Perubahan dibatalkan.');
   }
 });
 
