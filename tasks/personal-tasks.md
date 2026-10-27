@@ -27,9 +27,9 @@
 | # | Task | Status | Nota |
 |---|------|--------|------|
 | 1 | BizTrack (Pelanggan A) | 🔄 Ongoing | Langganan bulanan dah bayar. Upgrade 3 ciri: (1) upload PDF invois, (2) tambah cawangan, (3) kawalan akses gaji staf. Spec: BizTrack/docs/upgrade-pelanggan-a-2026-10.md |
-| 2 | AmOLED ESP32 | ⏳ | Clamp design |
+| 2 | AmOLED ESP32 | 🔄 | Clamp design |
 | 3 | Airfryer dashboard | ✅ | Siap. Display ke website. |
-| 4 | TikTok video | ⏳ | 4 video dah edit. Tambah voice audio. |
+| 4 | TikTok video | 🔄 | 4 video dah edit. Tambah voice audio. |
 | 5 | Semak caruman KWSP | ✅ |  |
 | 6 | Bayar pinjaman PTPTN guna KWSP | ⏳ | |
 | 7 | Buat akaun bank | ⏳ | |
@@ -47,7 +47,7 @@
 | 4 | Summary duit personal | ⏳ | |
 | 5 | Video cara buat logo sekolah | ⏳ | |
 | 6 | Follow up payment invois | ✅ | Pelanggan dah bayar. Bengkel 18 Oct |
-| 7 | Hydroponic Kratky — design baharu | 🔜 | Projek baharu. Ganti design temporary, custom 3D print. |
+| 7 | Hydroponic Kratky — design baharu | 🔄 | Projek baharu. Ganti design temporary, custom 3D print. |
 
 ---
 
