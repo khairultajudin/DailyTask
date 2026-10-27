@@ -14,7 +14,7 @@
 | 2 | Revamp old tutorials | P2 | | |
 | 3 | Update Tutorial Guide (Intern & Staff) | P2 | Update existing guide | ✅ |
 | 4 | AI Coding Pack — utilize utk Maker ESP32 | P1 | | |
-| 5 | New look Cytron homepage | P2 | Minor edit. Draft pakai claude dah siap. | |
+| 5 | New look Cytron homepage | P2 | Minor edit. Draft pakai claude dah siap. | ✅ |
 | 6 | Tutorial categories | P1 | Belum selesai — tengah cari masa | |
 | 7 | Centralize tutorials ke 1 GitHub/hub | P2 | | |
 | 8 | Tutorial rule guide | P2 | | |
@@ -34,8 +34,8 @@
 > 10 topik disahkan + 2 slot kosong (isi kemudian bila ada insight baharu).
 > **Constraint:** 3D Printing / filament **tidak lagi diliput** (keputusan Cytron).
 
-| Minggu | Tarikh | Topik | Jenis | Evidence |
-|--------|--------|-------|-------|----------|
+| Minggu | Tarikh | Topik | Jenis | Evidence | Status |
+|--------|--------|-------|-------|----------|------|
 | 1 | 12–16 Oct | I2C Device Not Detected? 7-Step Fix for Arduino, ESP32 & Raspberry Pi | New | I2C 21x, HuskyLens I2C 8x |
 | 2 | 19–23 Oct | Maker ESP32: 5V Sensors, Relays, Brownout & Wi-Fi | New | ESP32 195x, brownout recurring |
 | 3 | 26–30 Oct | Maker Mini Sumo: Fix Motors, Sensors & Boards | New | Sumo 232x. **Publish by 28 Oct** |
@@ -53,8 +53,8 @@
 
 Berdasarkan data (kuat tapi belum cover):
 
-| Kandidat | Evidence | Kenapa sesuai |
-|----------|----------|---------------|
+| Kandidat | Evidence | Kenapa sesuai | Status |
+|----------|----------|---------------|------|
 | Jetson Orin/Nano boot, PSU & OS | 190x | Produk high-value, isu berulang |
 | Micro:bit + REKA:BIT (MakeCode) | 106x | Pasar pendidikan, extension conflict |
 | School LO / quotation process | 66x | Keperluan paling kerap, tiada panduan |
@@ -62,8 +62,8 @@ Berdasarkan data (kuat tapi belum cover):
 
 ### Weekly Focus (12–16 Oct)
 
-| # | Task | Nota |
-|---|------|------|
+| # | Task | Nota | Status |
+|---|------|------|------|
 | 1 | One Industrial Article | |
 | 2 | One Revamp Tutorial | |
 | 3 | Cytron Insights Tutorial #1 — I2C device not detected | **Start drafting** |
@@ -93,8 +93,8 @@ Berdasarkan data (kuat tapi belum cover):
 
 ## ✅ Done
 
-| # | Task | Tarikh | Nota |
-|---|------|--------|------|
+| # | Task | Tarikh | Nota | Status |
+|---|------|--------|------|------|
 | 1 | Jumpa bos — bincang Q4 | 8 Oct (Khamis) | Bos setuju dengan Q4 plan |
 | 2 | FYP Judge at PSP | 5 Oct | Form printed & filled |
 | 3 | FYP Judge claim (HR) | 5 Oct | 3 sessions: Arus Academy, Politeknik Balik Pulau, PSP |
