@@ -10,7 +10,7 @@
 | # | Task | Status | Nota |
 |---|------|--------|------|
 | 1 | Kepala charger | ⏳ | |
-| 2 | Peti ais (kipas) | ⏳ | |
+| 2 | Peti ais (kipas) | ✅ |  |
 | 3 | Seal atap bilik | ⏳ | |
 | 4 | Wire management | ⏳ | |
 | 5 | Kira duit syiling | ⏳ | |
@@ -61,8 +61,8 @@
 
 ## ✅ Done
 
-| # | Task | Tarikh | Nota |
-|---|------|--------|------|
+| # | Task | Tarikh | Nota | Status |
+|---|------|--------|------|------|
 | 1 | Promotion Nomination Form | 9 Oct | Dah submit. Proposed: Senior Marketing Engineer, L3 |
 | 2 | Hydroponic guide deploy | 13 Oct | Berjaya masuk ke khaispace.com |
 | 3 | khaispace.com | 13 Oct | Berjaya deploy |
