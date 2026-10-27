@@ -529,18 +529,25 @@ document.getElementById('controls').addEventListener('click', e => {
   renderSections(b.dataset.f);
 });
 
-// ---------- rebuild markdown ----------
-function renderMarkdown() {
-  const out = [];
+// ---------- rebuild markdown & auto-save ----------
+const DASHBOARD_KEY = "__DASHBOARD_KEY__";
+const SAVE_ENDPOINT = (typeof location !== 'undefined' && location.hostname === 'dashboard.khaispace.com')
+  ? '/save'
+  : 'https://dashboard.khaispace.com/save';
+
+function getModifiedFiles() {
+  const result = {};
   ['personal-tasks.md', 'cytron-tasks.md'].forEach(file => {
     const src = DATA._sources[file];
     if (!src) return;
-    const bucket = DATA.sections.find(s => s.file === file).bucket;
+    const secObj = DATA.sections.find(s => s.file === file);
+    if (!secObj) return;
+    const bucket = secObj.bucket;
     const lines = src.split('\n');
     let section = null;
     let rowIdx = -1;
     let changed = 0;
-    let fixSepNext = false;   // header gained a Status column -> extend its separator too
+    let fixSepNext = false;
     for (let li = 0; li < lines.length; li++) {
       const line = lines[li];
       const hm = line.match(/^#{2,3}\s+(.*)$/);
@@ -554,8 +561,6 @@ function renderMarkdown() {
       const cells = trimmed.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
       if (!cells.length) continue;
       if (/^(#|task|idea|minggu|kandidat)$/i.test(cells[0])) {
-        // Section has no Status column yet: add one rather than overwriting the
-        // last column (which may hold a real note, e.g. Cytron's "Nota").
         if (!/status/i.test(cells.join('|'))) {
           lines[li] = trimmed.replace(/\s*\|$/, '') + ' | Status |';
           fixSepNext = true;
@@ -573,27 +578,79 @@ function renderMarkdown() {
         while (newCells.length <= stIdx) newCells.push('');
         newCells[stIdx] = st ? STATUS_MD[st] : STATUS_MD.none;
       } else {
-        // No Status column: append one so existing columns are left intact.
         newCells.push(st ? STATUS_MD[st] : STATUS_MD.none);
       }
       lines[li] = '| ' + newCells.join(' | ') + ' |';
       changed++;
     }
-    if (!changed) return;
-    out.push('### ' + file + '  (' + changed + ' baris diubah)\n\n```markdown\n'
-             + lines.join('\n') + '\n```');
+    if (changed > 0) {
+      result[file] = { content: lines.join('\n'), changed };
+    }
   });
+  return result;
+}
+
+function renderMarkdown() {
+  const mod = getModifiedFiles();
+  const out = [];
+  for (const [file, item] of Object.entries(mod)) {
+    out.push('### ' + file + '  (' + item.changed + ' baris diubah)\n\n```markdown\n'
+             + item.content + '\n```');
+  }
   return out.join('\n\n');
 }
 
-saveBtn.addEventListener('click', () => {
-  const md = renderMarkdown();
-  if (!md) { toast('Tiada perubahan untuk disimpan.'); return; }
-  diffbar.innerHTML = '<span class="fh">— Perubahan belum masuk ke fail .md —</span>\n'
-                    + 'Salin kandungan di bawah ke fail berkenaan, kemudian commit &amp; push.\n\n'
-                    + md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  diffbar.classList.add('show');
-  toast('Perubahan dipaparkan di bawah.');
+saveBtn.addEventListener('click', async () => {
+  const modFiles = getModifiedFiles();
+  const fileNames = Object.keys(modFiles);
+  if (!fileNames.length) {
+    toast('Tiada perubahan untuk disimpan.');
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = '⏳ Menyimpan...';
+  toast('Menyimpan ke GitHub...');
+
+  try {
+    for (const file of fileNames) {
+      const resp = await fetch(SAVE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-dashboard-key': DASHBOARD_KEY,
+        },
+        body: JSON.stringify({
+          file: file,
+          content: modFiles[file].content,
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.ok) {
+        throw new Error(data.error || ('Gagal menyimpan ' + file));
+      }
+      DATA._sources[file] = modFiles[file].content;
+    }
+
+    try { localStorage.removeItem(STORE_KEY); } catch(e){}
+    changeLog = {};
+    saveBtn.disabled = true;
+    saveBtn.textContent = '💾 Simpan';
+    diffbar.classList.remove('show');
+    toast('✅ Berjaya disimpan ke GitHub! Halaman dikemas kini.');
+    renderAll();
+  } catch (err) {
+    console.error(err);
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Simpan Semula';
+    toast('❌ Ralat: ' + (err.message || err));
+
+    const md = renderMarkdown();
+    diffbar.innerHTML = '<span class="fh">— Auto-save gagal (' + (err.message || err) + ') —</span>\n'
+                      + 'Salin kandungan di bawah secara manual:\n\n'
+                      + md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    diffbar.classList.add('show');
+  }
 });
 
 saveBtn.disabled = !hasChanges();
@@ -608,7 +665,8 @@ def main():
     data = build_data()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(data, ensure_ascii=False)
-    page = TEMPLATE.replace("__DATA__", payload)
+    key = "321295cb186bdc7a6f81155d6f72165b0cab5361d62693b2"
+    page = TEMPLATE.replace("__DATA__", payload).replace("__DASHBOARD_KEY__", key)
     OUT.write_text(page, encoding="utf-8")
     print(f"OK -> {OUT}")
     print(f"sections: {len(data['sections'])}  counters: {data['counters']}")
