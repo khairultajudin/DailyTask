@@ -480,17 +480,17 @@ function renderSections(filter) {
   const buckets = ['Personal', 'Cytron'];
   let html = '';
 
+  const allDoneRows = [];
+
   buckets.forEach(bucket => {
     const bSections = DATA.sections.filter(s => s.bucket === bucket);
     if (!bSections.length) return;
 
     const activeSecs = bSections.filter(s => !isDoneSec(s));
     const doneSec = bSections.find(s => isDoneSec(s));
-
-    // Gather tasks set as done from active sections
-    const movedToDone = [];
     let bHtml = '';
 
+    // Render active sections for this bucket
     activeSecs.forEach(sec => {
       const shown = [];
       const stIdx = statusCol(sec);
@@ -504,12 +504,13 @@ function renderSections(filter) {
           secDoneCount++;
           const taskName = r.cells[1] || r.cells[0] || '';
           const note = hasNotes ? (r.cells[sec.header.length - 1] || '') : '';
-          movedToDone.push({
+          allDoneRows.push({
             origBucket: sec.bucket,
             origTitle: sec.title,
             origIdx: idx,
             taskName: taskName,
             secTag: sec.title.replace(/^[^a-zA-Z0-9\s]+/, '').split('(')[0].trim(),
+            date: 'Selesai',
             note: note,
             status: 'done'
           });
@@ -553,86 +554,78 @@ function renderSections(filter) {
       </div>`;
     });
 
-    // Render Done section at the bottom for this bucket
-    if (doneSec && (filter === 'all' || filter === 'done')) {
-      const allDoneRows = [];
-      const stIdx = statusCol(doneSec);
-      const header = stIdx >= 0 ? doneSec.header : [...doneSec.header, 'Status'];
+    // Also collect original Done section tasks for this bucket
+    if (doneSec) {
       const taskColIdx = doneSec.header.findIndex(h => /task|perkara|projek/i.test(h)) >= 0
         ? doneSec.header.findIndex(h => /task|perkara|projek/i.test(h)) : 1;
-      const noteColIdx = doneSec.header.findIndex(h => /nota|catatan/i.test(h));
       const dateColIdx = doneSec.header.findIndex(h => /tarikh|date/i.test(h));
+      const noteColIdx = doneSec.header.findIndex(h => /nota|catatan/i.test(h));
 
-      // 1. Original items in Done section
       doneSec.rows.forEach((r, idx) => {
         const st = resolveStatus(doneSec.bucket, doneSec.title, idx) || 'done';
-        if (filter === 'all' || st === filter) {
+        if (st === 'done') {
           allDoneRows.push({
             origBucket: doneSec.bucket,
             origTitle: doneSec.title,
             origIdx: idx,
-            cells: r.cells.slice(),
+            taskName: r.cells[taskColIdx] || r.cells[1] || r.cells[0] || '',
+            secTag: '',
+            date: dateColIdx >= 0 ? (r.cells[dateColIdx] || '—') : '—',
+            note: noteColIdx >= 0 ? (r.cells[noteColIdx] || '') : '',
             status: st
           });
         }
       });
-
-      // 2. Moved items from active sections in this bucket
-      movedToDone.forEach(m => {
-        const rowCells = header.map(() => '');
-        rowCells[taskColIdx] = `<span class="tag" style="margin-right:6px;font-size:11px;opacity:0.85;">${escAttr(m.secTag)}</span>${escAttr(m.taskName)}`;
-        if (dateColIdx >= 0) rowCells[dateColIdx] = 'Selesai';
-        if (noteColIdx >= 0) rowCells[noteColIdx] = escAttr(m.note);
-        const doneStCol = stIdx >= 0 ? stIdx : header.length - 1;
-        rowCells[doneStCol] = pillHtml('done');
-
-        allDoneRows.push({
-          origBucket: m.origBucket,
-          origTitle: m.origTitle,
-          origIdx: m.origIdx,
-          cells: rowCells,
-          status: 'done'
-        });
-      });
-
-      if (allDoneRows.length) {
-        allDoneRows.forEach((r, i) => {
-          if (r.cells && r.cells.length > 0) r.cells[0] = String(i + 1);
-        });
-
-        const doneStIdx = stIdx >= 0 ? stIdx : header.length - 1;
-        bHtml += `
-        <div class="card">
-          <div class="head">
-            <span class="t">${escAttr(doneSec.title)}</span>
-            <span class="c">${allDoneRows.length} item · ${allDoneRows.length} done (100%)</span>
-          </div>
-          <div class="bar"><i style="width:100%"></i></div>
-          <table>
-            <thead><tr>${header.map((h, i) => `<th class="${i === 0 ? 'num' : ''}">${h}</th>`).join('')}</tr></thead>
-            <tbody>
-              ${allDoneRows.map(r => {
-                const cellId = r.origIdx + '-' + hashCode(r.origBucket + '|' + r.origTitle);
-                return `<tr>${
-                  header.map((h, i) => {
-                    if (i === doneStIdx) {
-                      return `<td class="statuscell"${editMode ? ` tabindex="0" role="button" data-bucket="${escAttr(r.origBucket)}" data-title="${escAttr(r.origTitle)}" data-idx="${r.origIdx}" data-cell-id="${cellId}" id="sc-${cellId}"` : ''}>${pillHtml(r.status)}</td>`;
-                    }
-                    const cls = (i === 0) ? 'num' : '';
-                    return `<td class="${cls}">${r.cells[i] ?? ''}</td>`;
-                  }).join('')
-                }</tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>`;
-      }
     }
 
     if (bHtml) {
       html += `<h2>${bucket === 'Cytron' ? '🛠' : '🏠'} ${bucket}<span class="tag">${bucket === 'Cytron' ? 'Cytron Technologies' : 'Peribadi'}</span></h2>` + bHtml;
     }
   });
+
+  // Render ONE unified Done section at the very bottom
+  if (allDoneRows.length && (filter === 'all' || filter === 'done')) {
+    html += `
+    <h2>✅ Selesai <span class="tag">Personal &amp; Cytron</span></h2>
+    <div class="card">
+      <div class="head">
+        <span class="t">✅ Done</span>
+        <span class="c">${allDoneRows.length} item · ${allDoneRows.length} done (100%)</span>
+      </div>
+      <div class="bar"><i style="width:100%"></i></div>
+      <table>
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>Kategori</th>
+            <th>Task</th>
+            <th>Tarikh / Dari</th>
+            <th>Nota</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allDoneRows.map((r, i) => {
+            const cellId = r.origIdx + '-' + hashCode(r.origBucket + '|' + r.origTitle);
+            const categoryBadge = r.origBucket === 'Cytron'
+              ? '<span class="tag" style="background:#0284c7;color:#fff;border-color:#38bdf8;font-weight:600;">🛠 Cytron</span>'
+              : '<span class="tag" style="background:#059669;color:#fff;border-color:#34d399;font-weight:600;">🏠 Personal</span>';
+
+            const originTag = r.secTag ? `<span class="tag" style="margin-right:6px;font-size:11px;opacity:0.85;">${escAttr(r.secTag)}</span>` : '';
+
+            return `<tr>
+              <td class="num">${i + 1}</td>
+              <td style="white-space:nowrap;">${categoryBadge}</td>
+              <td>${originTag}${escAttr(r.taskName)}</td>
+              <td style="white-space:nowrap;color:var(--muted);">${escAttr(r.date)}</td>
+              <td class="notes">${escAttr(r.note)}</td>
+              <td class="statuscell"${editMode ? ` tabindex="0" role="button" data-bucket="${escAttr(r.origBucket)}" data-title="${escAttr(r.origTitle)}" data-idx="${r.origIdx}" data-cell-id="${cellId}" id="sc-${cellId}"` : ''}>${pillHtml(r.status)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
 
   host.innerHTML = html || '<p class="stamp">Tiada item dalam filter ini.</p>';
   if (editMode) {
