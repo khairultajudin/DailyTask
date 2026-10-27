@@ -91,6 +91,21 @@ def status_of(cells):
     return ""
 
 
+EXCLUDED_SECTIONS = [
+    "Weekly Focus (12–16 Oct)",
+    "Slot Kosong — kandidat untuk diisi kemudian",
+]
+
+
+def is_excluded_section(title: str) -> bool:
+    norm = re.sub(r"\s+", " ", title.replace("–", "-").replace("—", "-")).strip().lower()
+    for ex in EXCLUDED_SECTIONS:
+        ex_norm = re.sub(r"\s+", " ", ex.replace("–", "-").replace("—", "-")).strip().lower()
+        if norm == ex_norm or ex.lower() in title.lower() or ex_norm in norm:
+            return True
+    return False
+
+
 def build_data():
     sources = {}
     groups = []
@@ -105,6 +120,8 @@ def build_data():
     for bucket, path, text in groups:
         for title, kind, payload in parse_tables(text):
             if kind == "note":
+                continue
+            if is_excluded_section(title):
                 continue
             header = payload[0]
             rows = []
@@ -374,7 +391,7 @@ td.notes:empty:before {
 <script>
 const DATA = __DATA__;
 
-const BASELINE_KEY = 'kai-task-baseline-v1';
+const BASELINE_KEY = 'kai-task-baseline-v2';
 try {
   const savedBase = JSON.parse(localStorage.getItem(BASELINE_KEY) || 'null');
   if (savedBase && savedBase.sections) {
