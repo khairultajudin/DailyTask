@@ -274,6 +274,26 @@ TEMPLATE = r"""<!DOCTYPE html>
 <script>
 const DATA = __DATA__;
 
+const BASELINE_KEY = 'kai-task-baseline-v1';
+try {
+  const savedBase = JSON.parse(localStorage.getItem(BASELINE_KEY) || 'null');
+  if (savedBase && savedBase.sections) {
+    savedBase.sections.forEach(savedSec => {
+      const liveSec = DATA.sections.find(s => s.bucket === savedSec.bucket && s.title === savedSec.title);
+      if (liveSec && savedSec.rows) {
+        savedSec.rows.forEach((r, idx) => {
+          if (liveSec.rows[idx]) {
+            if (r.cells) liveSec.rows[idx].cells = r.cells;
+            if (r.status !== undefined) liveSec.rows[idx].status = r.status;
+          }
+        });
+      }
+    });
+    if (savedBase.counters) DATA.counters = savedBase.counters;
+    if (savedBase.sources) DATA._sources = savedBase.sources;
+  }
+} catch(e){}
+
 document.getElementById('stamp').textContent = 'Dikemaskini: ' + DATA.generated;
 
 const STORE_KEY = 'kai-task-status-v1';
@@ -613,6 +633,40 @@ saveBtn.addEventListener('click', async () => {
   toast('Menyimpan ke GitHub...');
 
   try {
+    // 1. Commit changes into in-memory DATA.sections and DATA.counters
+    for (const [k, newSt] of Object.entries(changeLog)) {
+      const parts = k.split('||');
+      const b = parts[0], t = parts[1], i = +parts[2];
+      const sec = SECTION_INDEX[b + '||' + t];
+      if (sec && sec.rows[i]) {
+        const oldSt = origStatus(b, t, i);
+        sec.rows[i].status = newSt;
+        const stCol = statusCol(sec);
+        if (stCol >= 0) {
+          while (sec.rows[i].cells.length <= stCol) sec.rows[i].cells.push('');
+          sec.rows[i].cells[stCol] = newSt ? STATUS_ICON[newSt] : '';
+        } else {
+          sec.rows[i].cells.push(newSt ? STATUS_ICON[newSt] : '');
+        }
+        if (oldSt && DATA.counters[oldSt] !== undefined) DATA.counters[oldSt]--;
+        if (newSt && DATA.counters[newSt] !== undefined) DATA.counters[newSt]++;
+      }
+    }
+
+    for (const file of fileNames) {
+      DATA._sources[file] = modFiles[file].content;
+    }
+
+    // Build indexHtml payload to update GitHub's index.html simultaneously
+    let indexHtml = null;
+    try {
+      if (typeof document !== 'undefined' && document.documentElement) {
+        closePicker();
+        const curHtml = '<!DOCTYPE html>\n<html lang="ms">\n' + document.documentElement.innerHTML + '\n</html>';
+        indexHtml = curHtml.replace(/const DATA = \{.*?\};\n/s, 'const DATA = ' + JSON.stringify(DATA) + ';\n');
+      }
+    } catch(e){}
+
     for (const file of fileNames) {
       const resp = await fetch(SAVE_ENDPOINT, {
         method: 'POST',
@@ -623,21 +677,31 @@ saveBtn.addEventListener('click', async () => {
         body: JSON.stringify({
           file: file,
           content: modFiles[file].content,
+          indexHtml: indexHtml,
         }),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || !data.ok) {
         throw new Error(data.error || ('Gagal menyimpan ' + file));
       }
-      DATA._sources[file] = modFiles[file].content;
     }
 
-    try { localStorage.removeItem(STORE_KEY); } catch(e){}
+    // 2. Persist updated baseline in localStorage
+    try {
+      localStorage.setItem(BASELINE_KEY, JSON.stringify({
+        sections: DATA.sections,
+        counters: DATA.counters,
+        sources: DATA._sources,
+        timestamp: Date.now()
+      }));
+      localStorage.removeItem(STORE_KEY);
+    } catch(e){}
+
     changeLog = {};
     saveBtn.disabled = true;
     saveBtn.textContent = '💾 Simpan';
     diffbar.classList.remove('show');
-    toast('✅ Berjaya disimpan ke GitHub! Halaman dikemas kini.');
+    toast('✅ Berjaya disimpan! Dashboard telah dikemas kini.');
     renderAll();
   } catch (err) {
     console.error(err);
